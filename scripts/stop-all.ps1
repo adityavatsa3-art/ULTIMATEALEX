@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "SilentlyContinue"
 
-Write-Host "🛑 Stopping Omni-LLM-Suite..." -ForegroundColor Red
+Write-Host "`nStopping Omni-LLM-Suite..." -ForegroundColor Red
 
 # Docker services
 $docker = Get-Command docker -ErrorAction SilentlyContinue
@@ -9,7 +9,7 @@ if ($docker) {
     Push-Location (Get-Item "$PSScriptRoot\..").FullName
     docker compose down 2>$null
     Pop-Location
-    Write-Host "   ✅ Docker services stopped" -ForegroundColor Green
+    Write-Host "   [OK] Docker services stopped" -ForegroundColor Green
 }
 
 # Find and stop Node processes running our packages
@@ -19,7 +19,7 @@ foreach ($proc in $nodeProcs) {
         $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
         if ($cmdLine -match "(rotato|claude-cruise|opencoder|caveman|omni-llm)") {
             $proc | Stop-Process -Force
-            Write-Host "   ✅ Stopped node process: $($proc.Id)" -ForegroundColor Green
+            Write-Host "   [OK] Stopped node process: $($proc.Id)" -ForegroundColor Green
         }
     } catch { }
 }
@@ -31,13 +31,13 @@ foreach ($proc in $dotnetProcs) {
         $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)" -ErrorAction SilentlyContinue).CommandLine
         if ($cmdLine -match "(gateway|OmniGateway)") {
             $proc | Stop-Process -Force
-            Write-Host "   ✅ Stopped gateway process: $($proc.Id)" -ForegroundColor Green
+            Write-Host "   [OK] Stopped gateway process: $($proc.Id)" -ForegroundColor Green
         }
     } catch { }
 }
 
 # Stop Python/uv (token-savior)
 Get-Process -Name "python","uvicorn","uv" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Write-Host "   ✅ Stopped Python processes" -ForegroundColor Green
+Write-Host "   [OK] Stopped Python processes" -ForegroundColor Green
 
-Write-Host "`n✅ All Omni-LLM-Suite services stopped.`n" -ForegroundColor Green
+Write-Host "`n[OK] All Omni-LLM-Suite services stopped.`n" -ForegroundColor Green

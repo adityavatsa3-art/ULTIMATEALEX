@@ -7,23 +7,20 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
 $InstallDir = Resolve-Path $InstallDir -ErrorAction SilentlyContinue
 if (!$InstallDir) { $InstallDir = (Get-Item "$PSScriptRoot\..").FullName }
 
-function Write-Step($msg)  { Write-Host "`n▶  $msg" -ForegroundColor Cyan }
-function Write-Ok($msg)    { Write-Host "   ✅ $msg" -ForegroundColor Green }
-function Write-Warn($msg)  { Write-Host "   ⚠️  $msg" -ForegroundColor Yellow }
-function Write-Fail($msg)  { Write-Host "   ❌ $msg" -ForegroundColor Red; exit 1 }
+function Write-Step($msg)  { Write-Host "`n-> $msg" -ForegroundColor Cyan }
+function Write-Ok($msg)    { Write-Host "   [OK] $msg" -ForegroundColor Green }
+function Write-Warn($msg)  { Write-Host "   [WARN] $msg" -ForegroundColor Yellow }
+function Write-Fail($msg)  { Write-Host "   [FAIL] $msg" -ForegroundColor Red; exit 1 }
 
-Write-Host @"
-╔══════════════════════════════════════════════╗
-║     🦌 Omni-LLM-Suite — Windows Bootstrap    ║
-╚══════════════════════════════════════════════╝
-"@ -ForegroundColor Magenta
+Write-Host "========================================================" -ForegroundColor Magenta
+Write-Host "     Omni-LLM-Suite - Windows Bootstrap" -ForegroundColor Magenta
+Write-Host "========================================================" -ForegroundColor Magenta
 
-# ─── 1. PREREQUISITES ──────────────────────────────────────
+# --- 1. PREREQUISITES ---
 Write-Step "Checking prerequisites..."
 
 $required = @{
@@ -34,65 +31,74 @@ $required = @{
 
 foreach ($cmd in $required.Keys) {
     if (!(Get-Command $cmd -ErrorAction SilentlyContinue)) {
-        Write-Warn "$cmd not found — installing $($required[$cmd]) via winget..."
+        Write-Warn "$cmd not found - installing $($required[$cmd]) via winget..."
         winget install --id $required[$cmd] --silent --accept-package-agreements --accept-source-agreements
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                    [System.Environment]::GetEnvironmentVariable("Path","User")
+        $mPath = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+        $uPath = [System.Environment]::GetEnvironmentVariable("Path","User")
+        $env:Path = "$mPath;$uPath"
     } else {
-        Write-Ok "$cmd $(& $cmd --version 2>&1 | Select-Object -First 1)"
+        $ver = & $cmd --version 2>&1 | Select-Object -First 1
+        Write-Ok "$cmd $ver"
     }
 }
 
-# ─── 2. PNPM + TURBOREPO ──────────────────────────────────
+# --- 2. PNPM + TURBOREPO ---
 Write-Step "Installing pnpm and Turborepo..."
 npm install -g pnpm@9 turbo --silent
-Write-Ok "pnpm $(pnpm --version) | turbo installed"
+$pnpmVer = pnpm --version
+Write-Ok "pnpm $pnpmVer | turbo installed"
 
-# ─── 3. RUST TOOLCHAIN ────────────────────────────────────
+# --- 3. RUST TOOLCHAIN ---
 if (!$SkipRust) {
     Write-Step "Installing Rust (MSVC target)..."
     if (!(Get-Command rustup -ErrorAction SilentlyContinue)) {
-        Write-Warn "rustup not found — installing via winget..."
+        Write-Warn "rustup not found - installing via winget..."
         winget install --id Rustlang.Rustup --silent --accept-package-agreements
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                    [System.Environment]::GetEnvironmentVariable("Path","User")
+        $mPath = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+        $uPath = [System.Environment]::GetEnvironmentVariable("Path","User")
+        $env:Path = "$mPath;$uPath"
     }
     rustup target add x86_64-pc-windows-msvc 2>$null
-    Write-Ok "rustc $(rustc --version)"
+    $rustcVer = rustc --version
+    Write-Ok "rustc $rustcVer"
 }
 
-# ─── 4. UV (Python Package Manager) ───────────────────────
+# --- 4. UV (Python Package Manager) ---
 Write-Step "Installing uv..."
 if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
     pip install uv --quiet
 }
-Write-Ok "uv $(uv --version)"
+$uvVer = uv --version
+Write-Ok "uv $uvVer"
 
-# ─── 5. DOCKER DESKTOP ────────────────────────────────────
+# --- 5. DOCKER DESKTOP ---
 if (!$SkipDocker) {
     Write-Step "Checking Docker Desktop..."
     if (!(Get-Command docker -ErrorAction SilentlyContinue)) {
-        Write-Warn "Docker not found — installing Docker Desktop..."
+        Write-Warn "Docker not found - installing Docker Desktop..."
         winget install --id Docker.DockerDesktop --silent --accept-package-agreements
         Write-Warn "Docker Desktop installed. Start it manually before running start-all.ps1"
     } else {
-        Write-Ok "docker $(docker --version)"
+        $dockerVer = docker --version
+        Write-Ok "docker $dockerVer"
     }
 }
 
-# ─── 6. .NET 8 SDK ───────────────────────────────────────
+# --- 6. .NET 8 SDK ---
 if (!$SkipDotnet) {
     Write-Step "Checking .NET 8 SDK..."
     if (!(Get-Command dotnet -ErrorAction SilentlyContinue)) {
         winget install --id Microsoft.DotNet.SDK.8 --silent --accept-package-agreements
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                    [System.Environment]::GetEnvironmentVariable("Path","User")
+        $mPath = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+        $uPath = [System.Environment]::GetEnvironmentVariable("Path","User")
+        $env:Path = "$mPath;$uPath"
     }
-    Write-Ok "dotnet $(dotnet --version)"
+    $dotnetVer = dotnet --version
+    Write-Ok "dotnet $dotnetVer"
 }
 
-# ─── 7. CLONE / UPDATE SUBPACKAGES ────────────────────────
-Write-Step "Cloning source repositories into packages/..."
+# --- 7. CLONE / UPDATE SUBPACKAGES ---
+Write-Step "Checking integrated packages in packages/..."
 
 $repos = @(
     @{ Url = "https://github.com/rtk-ai/rtk.git";                             Dir = "packages/rtk" }
@@ -108,36 +114,35 @@ $repos = @(
 foreach ($repo in $repos) {
     $target = Join-Path $InstallDir $repo.Dir
     if (Test-Path $target) {
-        Write-Ok "$($repo.Dir) exists — pulling latest..."
-        Push-Location $target
-        git pull --ff-only 2>$null
-        Pop-Location
+        Write-Ok "$($repo.Dir) integrated in monorepo"
     } else {
-        Write-Ok "Cloning $($repo.Url) → $($repo.Dir)"
+        Write-Ok "Cloning $($repo.Url) -> $($repo.Dir)"
         $parent = Split-Path $target -Parent
         if (!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
         git clone --depth 1 $repo.Url $target
     }
 }
 
-# ─── 8. INSTALL NODE DEPENDENCIES ────────────────────────
+# --- 8. INSTALL NODE DEPENDENCIES ---
 Write-Step "Installing workspace Node.js dependencies..."
 Push-Location $InstallDir
 pnpm install 2>&1 | Select-Object -Last 5
 Pop-Location
 Write-Ok "Node.js dependencies installed"
 
-# ─── 9. PYTHON VIRTUAL ENVIRONMENT ───────────────────────
+# --- 9. PYTHON VIRTUAL ENVIRONMENT ---
 Write-Step "Creating Python virtual environment..."
 Push-Location $InstallDir
 uv venv .venv --python 3.12 2>$null
-& .\.venv\Scripts\activate.ps1 2>$null
-uv pip install -e packages/token-savior 2>$null
-uv pip install -e packages/free-llm-proxy 2>$null
+if (Test-Path ".\.venv\Scripts\activate.ps1") {
+    & .\.venv\Scripts\activate.ps1 2>$null
+    uv pip install -e packages/token-savior 2>$null
+    uv pip install -e packages/free-llm-proxy 2>$null
+}
 Pop-Location
 Write-Ok "Python venv ready at .venv/"
 
-# ─── 10. BUILD RUST BINARY ───────────────────────────────
+# --- 10. BUILD RUST BINARY ---
 if (!$SkipRust -and (Test-Path "$InstallDir\packages\rtk\Cargo.toml")) {
     Write-Step "Building RTK (Rust release binary)..."
     Push-Location "$InstallDir\packages\rtk"
@@ -146,12 +151,12 @@ if (!$SkipRust -and (Test-Path "$InstallDir\packages\rtk\Cargo.toml")) {
     if (!(Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force | Out-Null }
     if (Test-Path "target\release\rtk.exe") {
         Copy-Item "target\release\rtk.exe" "$binDir\rtk.exe" -Force
-        Write-Ok "rtk.exe → bin/rtk.exe"
+        Write-Ok "rtk.exe -> bin/rtk.exe"
     }
     Pop-Location
 }
 
-# ─── 11. BUILD .NET GATEWAY ──────────────────────────────
+# --- 11. BUILD .NET GATEWAY ---
 if (!$SkipDotnet) {
     Write-Step "Restoring .NET Gateway dependencies..."
     Push-Location "$InstallDir\apps\gateway"
@@ -160,7 +165,7 @@ if (!$SkipDotnet) {
     Write-Ok ".NET Gateway ready"
 }
 
-# ─── 12. ENVIRONMENT FILE ────────────────────────────────
+# --- 12. ENVIRONMENT FILE ---
 Write-Step "Generating .env from template..."
 $envFile = Join-Path $InstallDir ".env"
 $envExample = Join-Path $InstallDir ".env.example"
@@ -172,19 +177,17 @@ if (!(Test-Path $envFile)) {
         Write-Warn ".env.example not found"
     }
 } else {
-    Write-Warn ".env already exists — skipping (edit it manually)"
+    Write-Warn ".env already exists - skipping (edit it manually)"
 }
 
-# ─── DONE ─────────────────────────────────────────────────
-Write-Host @"
-
-╔══════════════════════════════════════════════╗
-║           ✅ BOOTSTRAP COMPLETE               ║
-╠══════════════════════════════════════════════╣
-║  Next steps:                                  ║
-║  1. Edit .env with your API keys              ║
-║  2. Run:  .\scripts\start-all.ps1             ║
-║  3. Open: http://localhost:5173 (Dashboard)   ║
-║  4. Proxy: http://localhost:8080              ║
-╚══════════════════════════════════════════════╝
-"@ -ForegroundColor Green
+# --- DONE ---
+Write-Host ""
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host "           [OK] BOOTSTRAP COMPLETE" -ForegroundColor Green
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host "Next steps:" -ForegroundColor Cyan
+Write-Host "1. Edit .env with your API keys" -ForegroundColor White
+Write-Host "2. Run:  .\scripts\start-all.ps1" -ForegroundColor White
+Write-Host "3. Open: http://localhost:5173 (Dashboard)" -ForegroundColor White
+Write-Host "4. Proxy: http://localhost:8080" -ForegroundColor White
+Write-Host ""
