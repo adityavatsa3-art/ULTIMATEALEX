@@ -6,7 +6,7 @@ param(
     [string]$InstallDir = "$PSScriptRoot\.."
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $InstallDir = Resolve-Path $InstallDir -ErrorAction SilentlyContinue
 if (!$InstallDir) { $InstallDir = (Get-Item "$PSScriptRoot\..").FullName }
