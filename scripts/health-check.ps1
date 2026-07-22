@@ -27,7 +27,7 @@ $tsPort      = Get-EnvOrDefault "TOKEN_SAVIOR_PORT" "3100"
 $services = @(
     @{ Name = "Gateway";       Url = "http://localhost:$gatewayPort/health" },
     @{ Name = "Dashboard";     Url = "http://localhost:3000" },
-    @{ Name = "Rotato";        Url = "http://localhost:$rotatoPort/health" },
+    @{ Name = "Rotato";        Url = "http://localhost:$rotatoPort/admin" },
     @{ Name = "Claude Cruise"; Url = "http://localhost:$cruisePort/health" },
     @{ Name = "MOA";           Url = "http://localhost:$moaPort/health" }
 )

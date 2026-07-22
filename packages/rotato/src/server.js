@@ -2,6 +2,7 @@ const http = require('http');
 const { URL } = require('url');
 const fs = require('fs');
 const path = require('path');
+const staticPublicDir = path.join(__dirname, '..', 'public');
 const crypto = require('crypto');
 const TelegramBot = require('./telegramBot');
 
@@ -1445,7 +1446,7 @@ class ProxyServer {
 
   serveAdminPanel(res) {
     try {
-      const htmlPath = path.join(process.cwd(), 'public', 'admin.html');
+      const htmlPath = path.join(staticPublicDir, 'admin.html');
       const html = fs.readFileSync(htmlPath, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(html);
