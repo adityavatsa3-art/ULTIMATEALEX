@@ -88,8 +88,8 @@ app.MapPost("/v1/messages", async (HttpContext ctx, ProxyChainService proxy) =>
 // ─── Dashboard (static fallback) ─────────────────────────
 app.MapGet("/", () => Results.Redirect("http://localhost:5173"));
 
-var host = Environment.GetEnvironmentVariable("GATEWAY_HOST") ?? "0.0.0.0";
-var port = Environment.GetEnvironmentVariable("GATEWAY_PORT") ?? "8088";
+var host = Environment.GetEnvironmentVariable("GATEWAY_HOST") ?? "127.0.0.1";
+var port = Environment.GetEnvironmentVariable("GATEWAY_PORT") ?? "8080";
 
 Log.Information("🦌 Omni-LLM Gateway starting on http://{Host}:{Port}", host, port);
 app.Run($"http://{host}:{port}");

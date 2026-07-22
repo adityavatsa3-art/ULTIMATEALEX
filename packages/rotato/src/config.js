@@ -24,7 +24,13 @@ class Config {
     }
 
     const envContent = fs.readFileSync(envPath, 'utf8');
-    const envVars = this.parseEnvFile(envContent);
+    const envVars = { ...process.env, ...this.parseEnvFile(envContent) };
+    const localEnvPath = path.join(process.cwd(), '.env.local');
+    if (fs.existsSync(localEnvPath)) {
+      const localContent = fs.readFileSync(localEnvPath, 'utf8');
+      Object.assign(envVars, this.parseEnvFile(localContent));
+      console.log(`[CONFIG] Merged secrets from ${localEnvPath}`);
+    }
 
     // Resolve port: .env takes priority, then process.env, then fail
     const port = envVars.PORT || process.env.PORT;
