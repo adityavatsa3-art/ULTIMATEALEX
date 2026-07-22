@@ -75,8 +75,7 @@ app.MapGet("/health", () => Results.Ok(new
 {
     status = "healthy",
     timestamp = DateTimeOffset.UtcNow,
-    version = "1.0.0",
-    services = new { rotato = true, cruise = true, moa = true, tokenSavior = true }
+    version = "1.0.0"
 }));
 
 // ─── Unified Proxy Endpoints ─────────────────────────────

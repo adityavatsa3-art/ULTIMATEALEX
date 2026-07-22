@@ -25,11 +25,10 @@ $moaPort     = Get-EnvOrDefault "MOA_AGGREGATOR_PORT" "8007"
 $tsPort      = Get-EnvOrDefault "TOKEN_SAVIOR_PORT" "3100"
 
 $services = @(
-    @{ Name = "Gateway";       Url = "http://localhost:$gatewayPort/health" },
-    @{ Name = "Dashboard";     Url = "http://localhost:3000" },
-    @{ Name = "Rotato";        Url = "http://localhost:$rotatoPort/admin" },
-    @{ Name = "Claude Cruise"; Url = "http://localhost:$cruisePort/health" },
-    @{ Name = "MOA";           Url = "http://localhost:$moaPort/health" }
+    @{ Name = "Gateway";       Url = "http://127.0.0.1:$gatewayPort/health" },
+    @{ Name = "Dashboard";     Url = "http://127.0.0.1:3000" },
+    @{ Name = "Rotato";        Url = "http://127.0.0.1:$rotatoPort/admin" },
+    @{ Name = "Claude Cruise"; Url = "http://127.0.0.1:$cruisePort/health" }
 )
 
 Write-Host "`n========================================================" -ForegroundColor Cyan

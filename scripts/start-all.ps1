@@ -5,7 +5,6 @@ $ErrorActionPreference = "SilentlyContinue"
 $root = (Get-Item "$PSScriptRoot\..").FullName
 Push-Location $root
 
-# ─── Load .env ────────────────────────────────────────────
 if (Test-Path ".env") {
     Get-Content ".env" | ForEach-Object {
         if ($_ -match '^\s*([^#\s][^=]*)=(.*)$') {
@@ -23,93 +22,47 @@ $GATEWAY_PORT = Get-EnvOrDefault "GATEWAY_PORT" "8088"
 $ROTATO_PORT  = Get-EnvOrDefault "ROTATO_PORT" "8990"
 $CRUISE_PORT  = Get-EnvOrDefault "CRUISE_PORT" "4141"
 $MOA_PORT     = Get-EnvOrDefault "MOA_AGGREGATOR_PORT" "8007"
-$TS_PORT      = Get-EnvOrDefault "TOKEN_SAVIOR_PORT" "3100"
 
-Write-Host "`n🦌 Starting Omni-LLM-Suite..." -ForegroundColor Magenta
-Write-Host "   Root: $root`n" -ForegroundColor Gray
+Write-Host "Starting Omni-LLM-Suite..." -ForegroundColor Magenta
 
-# ─── Build packages first ─────────────────────────────────
-if (!$NoBuild) {
-    Write-Host "🔨 Building packages..." -ForegroundColor Cyan
-    & pnpm run build 2>&1 | Select-Object -Last 5
+if ($NoBuild -eq $false) {
+    Write-Host "Building packages..." -ForegroundColor Cyan
+    pnpm run build
 }
 
-# ─── Docker Services (Redis + MOA) ───────────────────────
-Write-Host "🐳 Starting Docker services (Redis + MOA)..." -ForegroundColor Cyan
-$docker = Get-Command docker -ErrorAction SilentlyContinue
-if ($docker) {
-    docker compose up -d --remove-orphans 2>&1 | Select-Object -Last 3
-    Write-Host "   ✅ Docker services started" -ForegroundColor Green
-} else {
-    Write-Host "   ⚠️  Docker not available — skipping Redis/MOA" -ForegroundColor Yellow
+Write-Host "Starting Rotato (port $ROTATO_PORT)..." -ForegroundColor Cyan
+if (Test-Path "packages/rotato/index.js") {
+    Start-Process -FilePath "node" -ArgumentList "packages/rotato/index.js" -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
+    Write-Host "   [OK] Rotato started" -ForegroundColor Green
 }
 
-Start-Sleep -Seconds 2
-
-# ─── Rotato ───────────────────────────────────────────────
-Write-Host "🔄 Starting Rotato (port $ROTATO_PORT)..." -ForegroundColor Cyan
-$rotatoEntry = @("packages/rotato/dist/index.js", "packages/rotato/src/index.js", "packages/rotato/index.js") | 
-    Where-Object { Test-Path (Join-Path $root $_) } | Select-Object -First 1
-
-if ($rotatoEntry) {
-    Start-Process -FilePath "node" -ArgumentList $rotatoEntry `
-        -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
-    Write-Host "   ✅ Rotato started" -ForegroundColor Green
-} else {
-    Write-Host "   ⚠️  Rotato entry not found — run 'pnpm --filter rotato build' first" -ForegroundColor Yellow
+Write-Host "Starting Claude Cruise (port $CRUISE_PORT)..." -ForegroundColor Cyan
+if (Test-Path "packages/claude-cruise/dist/cli/index.js") {
+    Start-Process -FilePath "node" -ArgumentList "packages/claude-cruise/dist/cli/index.js" -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
+    Write-Host "   [OK] Claude Cruise started" -ForegroundColor Green
 }
 
-# ─── Claude Cruise ────────────────────────────────────────
-Write-Host "🚢 Starting Claude Cruise (port $CRUISE_PORT)..." -ForegroundColor Cyan
-$cruiseEntry = @("packages/claude-cruise/dist/cli/index.js", "packages/claude-cruise/dist/index.js", "packages/claude-cruise/src/index.js") |
-    Where-Object { Test-Path (Join-Path $root $_) } | Select-Object -First 1
-
-if ($cruiseEntry) {
-    Start-Process -FilePath "node" -ArgumentList $cruiseEntry `
-        -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
-    Write-Host "   ✅ Claude Cruise started" -ForegroundColor Green
-} else {
-    Write-Host "   ⚠️  Claude Cruise entry not found" -ForegroundColor Yellow
-}
-
-
-
-# ─── Gateway (.NET 8) ─────────────────────────────────────
-Write-Host "🌐 Starting Gateway (.NET 8, port $GATEWAY_PORT)..." -ForegroundColor Cyan
+Write-Host "Starting Gateway (.NET 8, port $GATEWAY_PORT)..." -ForegroundColor Cyan
 $dotnetExe = "C:\Program Files\dotnet\dotnet.exe"
-if (Test-Path $dotnetExe) {
-    Start-Process -FilePath $dotnetExe -ArgumentList "run", "--project", "apps/gateway/Gateway.csproj", "-c", "Release" `
-        -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
-    Write-Host "   ✅ Gateway started" -ForegroundColor Green
+$gatewayDll = "apps/gateway/bin/Release/net8.0/OmniGateway.dll"
+if (Test-Path $gatewayDll) {
+    Start-Process -FilePath $dotnetExe -ArgumentList $gatewayDll -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
+    Write-Host "   [OK] Gateway started (compiled DLL)" -ForegroundColor Green
 } else {
-    Write-Host "   ⚠️  dotnet.exe not found at $dotnetExe" -ForegroundColor Yellow
+    Start-Process -FilePath $dotnetExe -ArgumentList "run", "--project", "apps/gateway/Gateway.csproj", "-c", "Release" -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
+    Write-Host "   [OK] Gateway started (dotnet run)" -ForegroundColor Green
 }
 
-# ─── Dashboard (Vite React) ──────────────────────────────
-Write-Host "📊 Starting Dashboard (port 5173)..." -ForegroundColor Cyan
-Start-Process -FilePath "pnpm" -ArgumentList "--filter", "dashboard", "dev" `
-    -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
-Write-Host "   ✅ Dashboard started" -ForegroundColor Green
+Write-Host "Starting Dashboard (port 3000)..." -ForegroundColor Cyan
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c pnpm --filter dashboard dev --port 3000" -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
+Write-Host "   [OK] Dashboard started" -ForegroundColor Green
 
 Start-Sleep -Seconds 3
 
-Write-Host @"
-
-╔══════════════════════════════════════════════╗
-║          🦌 ALL SERVICES STARTING             ║
-╠══════════════════════════════════════════════╣
-║  Gateway:     http://localhost:$GATEWAY_PORT           ║
-║  Dashboard:   http://localhost:5173           ║
-║  Rotato:      http://localhost:$ROTATO_PORT           ║
-║  Cruise:      http://localhost:$CRUISE_PORT           ║
-║  MOA:         http://localhost:$MOA_PORT           ║
-║  Token Savior: http://localhost:$TS_PORT          ║
-║  Redis:       localhost:6379                  ║
-╠══════════════════════════════════════════════╣
-║  Health:  http://localhost:$GATEWAY_PORT/health     ║
-╚══════════════════════════════════════════════╝
-"@ -ForegroundColor Green
-
-Write-Host "Run .\scripts\health-check.ps1 to verify all services`n" -ForegroundColor Gray
+Write-Host "ALL SERVICES STARTING" -ForegroundColor Green
+Write-Host "Gateway:   http://127.0.0.1:$GATEWAY_PORT" -ForegroundColor Green
+Write-Host "Dashboard: http://127.0.0.1:3000" -ForegroundColor Green
+Write-Host "Rotato:    http://127.0.0.1:$ROTATO_PORT" -ForegroundColor Green
+Write-Host "Cruise:    http://127.0.0.1:$CRUISE_PORT" -ForegroundColor Green
 
 Pop-Location
