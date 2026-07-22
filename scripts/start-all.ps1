@@ -61,7 +61,7 @@ if ($rotatoEntry) {
 
 # ─── Claude Cruise ────────────────────────────────────────
 Write-Host "🚢 Starting Claude Cruise (port $CRUISE_PORT)..." -ForegroundColor Cyan
-$cruiseEntry = @("packages/claude-cruise/dist/index.js", "packages/claude-cruise/src/index.js") |
+$cruiseEntry = @("packages/claude-cruise/dist/cli/index.js", "packages/claude-cruise/dist/index.js", "packages/claude-cruise/src/index.js") |
     Where-Object { Test-Path (Join-Path $root $_) } | Select-Object -First 1
 
 if ($cruiseEntry) {
