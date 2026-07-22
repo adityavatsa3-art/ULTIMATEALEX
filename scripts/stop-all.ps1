@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 $ErrorActionPreference = "SilentlyContinue"
 
 Write-Host "🛑 Stopping Omni-LLM-Suite..." -ForegroundColor Red

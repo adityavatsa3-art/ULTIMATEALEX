@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 param([int]$TimeoutSec = 3)
 
 $ErrorActionPreference = "SilentlyContinue"
