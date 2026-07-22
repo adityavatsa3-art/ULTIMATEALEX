@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`user input with special characters is handled correctly > special chars - final state 1`] = `
+"> Line 1
+Line 2	with tab
+Quotes: " ' \`
+Brackets: [] {}
+▼
+ ╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │Received special characters.                                                                     │
+ ╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  / for commands                                                    alt + ⏎ for newline ·25 tokens"
+`;
+
+exports[`user input with special characters is handled correctly > special chars - input displayed 1`] = `
+"
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ > Line 1                                                                                         │
+│   Line 2	with tab                                                                                │
+│   Quotes: " ' \`                                                                                  │
+│   Brackets: [] {}                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  / for commands                                                     alt + ⏎ for newline ·0 tokens"
+`;

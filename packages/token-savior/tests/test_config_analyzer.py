@@ -1,0 +1,858 @@
+"""Tests for config_analyzer.check_duplicates."""
+
+from token_savior.config_analyzer import (
+    analyze_config,
+    check_duplicates,
+    check_orphans,
+    check_secrets,
+    _format_issues,
+    _is_config_file,
+    _is_code_file,
+)
+from token_savior.models import (
+    ConfigIssue,
+    LineRange,
+    ProjectIndex,
+    SectionInfo,
+    StructuralMetadata,
+)
+
+
+def _make_meta(source_name, sections, lines=None):
+    if lines is None:
+        lines = [""] * (max((s.line_range.end for s in sections), default=0) + 1)
+    return StructuralMetadata(
+        source_name=source_name,
+        total_lines=len(lines),
+        total_chars=sum(len(line) for line in lines),
+        lines=lines,
+        line_char_offsets=[0] * len(lines),
+        sections=sections,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Exact duplicate keys at the same nesting level
+# ---------------------------------------------------------------------------
+
+
+class TestExactDuplicates:
+    def test_exact_duplicate_same_file_same_level(self):
+        """Two sections with the same key at level 1 in the same file → flagged."""
+        sections = [
+            SectionInfo(title="PORT", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="PORT", level=1, line_range=LineRange(3, 3)),
+        ]
+        meta = _make_meta("app.env", sections)
+        issues = check_duplicates({"app.env": meta})
+        dup = [i for i in issues if i.check == "duplicate"]
+        assert len(dup) >= 1
+        assert all(i.key == "PORT" for i in dup)
+        assert all(i.file == "app.env" for i in dup)
+
+    def test_exact_duplicate_deeper_level(self):
+        """Exact duplicate at level 2 is also flagged."""
+        sections = [
+            SectionInfo(title="host", level=2, line_range=LineRange(2, 2)),
+            SectionInfo(title="host", level=2, line_range=LineRange(5, 5)),
+        ]
+        meta = _make_meta("config.yml", sections)
+        issues = check_duplicates({"config.yml": meta})
+        dup = [i for i in issues if i.check == "duplicate"]
+        assert len(dup) >= 1
+
+    def test_no_false_positive_different_keys(self):
+        """Different keys at same level should not be flagged as duplicates."""
+        sections = [
+            SectionInfo(title="HOST", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="PORT", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("app.env", sections)
+        issues = check_duplicates({"app.env": meta})
+        assert len(issues) == 0
+
+    def test_no_false_positive_empty(self):
+        """Empty config produces no issues."""
+        meta = _make_meta("empty.env", [], lines=[""])
+        issues = check_duplicates({"empty.env": meta})
+        assert len(issues) == 0
+
+
+# ---------------------------------------------------------------------------
+# Similar keys (typos) via Levenshtein distance
+# ---------------------------------------------------------------------------
+
+
+class TestSimilarKeys:
+    def test_similar_key_typo_same_file(self):
+        """db_host vs db_hsot (distance=2, both >3 chars) → flagged as similar."""
+        sections = [
+            SectionInfo(title="db_host", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="db_hsot", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("config.ini", sections)
+        issues = check_duplicates({"config.ini": meta})
+        sim = [i for i in issues if i.check == "duplicate" and "similar" in i.message.lower()]
+        assert len(sim) >= 1
+
+    def test_similar_key_distance_1(self):
+        """DATABASE_URL vs DATABASE_ULR (distance=2) → flagged."""
+        sections = [
+            SectionInfo(title="DATABASE_URL", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="DATABASE_ULR", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("app.env", sections)
+        issues = check_duplicates({"app.env": meta})
+        sim = [i for i in issues if i.check == "duplicate"]
+        assert len(sim) >= 1
+
+    def test_short_keys_not_similar_flagged(self):
+        """Keys <=3 chars (e.g. 'db' vs 'dc') should not be flagged as similar."""
+        sections = [
+            SectionInfo(title="db", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="dc", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("app.env", sections)
+        issues = check_duplicates({"app.env": meta})
+        # distance=1, but keys are <=3 chars → should not be flagged
+        sim = [i for i in issues if i.check == "duplicate" and "similar" in i.message.lower()]
+        assert len(sim) == 0
+
+    def test_very_different_keys_not_flagged(self):
+        """Keys with Levenshtein > 2 should not be flagged as similar."""
+        sections = [
+            SectionInfo(title="REDIS_HOST", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="DATABASE_URL", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("app.env", sections)
+        issues = check_duplicates({"app.env": meta})
+        assert len(issues) == 0
+
+
+# ---------------------------------------------------------------------------
+# Different levels → NOT flagged
+# ---------------------------------------------------------------------------
+
+
+class TestDifferentLevels:
+    def test_same_key_different_levels_not_flagged(self):
+        """server.host and db.host share 'host' but at different levels → NOT flagged."""
+        sections = [
+            SectionInfo(title="host", level=2, line_range=LineRange(2, 2)),
+            SectionInfo(title="host", level=3, line_range=LineRange(6, 6)),
+        ]
+        meta = _make_meta("config.yml", sections)
+        issues = check_duplicates({"config.yml": meta})
+        assert len(issues) == 0
+
+    def test_same_key_level1_and_level2_not_flagged(self):
+        """Same key at level 1 and level 2 should not be flagged."""
+        sections = [
+            SectionInfo(title="host", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="host", level=2, line_range=LineRange(3, 3)),
+        ]
+        meta = _make_meta("config.yml", sections)
+        issues = check_duplicates({"config.yml": meta})
+        assert len(issues) == 0
+
+    def test_same_key_under_different_parents_not_flagged(self):
+        """Sibling branches may reuse the same child key without conflict."""
+        sections = [
+            SectionInfo(title="redis", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="image", level=2, line_range=LineRange(2, 2)),
+            SectionInfo(title="api", level=1, line_range=LineRange(3, 3)),
+            SectionInfo(title="image", level=2, line_range=LineRange(4, 4)),
+        ]
+        meta = _make_meta("docker-compose.yml", sections)
+        issues = check_duplicates({"docker-compose.yml": meta})
+        assert issues == []
+
+    def test_same_line_duplicate_is_not_reported_twice(self):
+        """Flow-style YAML should not report a line as a duplicate of itself."""
+        sections = [
+            SectionInfo(title="latenessMs", level=2, line_range=LineRange(1, 1)),
+            SectionInfo(title="latenessMs", level=2, line_range=LineRange(1, 1)),
+        ]
+        meta = _make_meta("deploy.yaml", sections, lines=["", "trades: { latenessMs: 100 }"])
+        issues = check_duplicates({"deploy.yaml": meta})
+        duplicates = [i for i in issues if i.check == "duplicate"]
+        assert duplicates == []
+
+
+# ---------------------------------------------------------------------------
+# Cross-file conflicts
+# ---------------------------------------------------------------------------
+
+
+class TestCrossFileConflicts:
+    def test_cross_file_conflict_different_line_content(self):
+        """PORT=3000 in file A and PORT=8080 in file B → cross-file conflict."""
+        sections_a = [SectionInfo(title="PORT", level=1, line_range=LineRange(1, 1))]
+        sections_b = [SectionInfo(title="PORT", level=1, line_range=LineRange(1, 1))]
+        lines_a = ["PORT=3000"]
+        lines_b = ["PORT=8080"]
+        meta_a = _make_meta(".env.dev", sections_a, lines=[""] + lines_a)
+        meta_b = _make_meta(".env.prod", sections_b, lines=[""] + lines_b)
+        issues = check_duplicates({".env.dev": meta_a, ".env.prod": meta_b})
+        cross = [i for i in issues if i.check == "duplicate" and i.key == "PORT"]
+        assert len(cross) >= 1
+
+    def test_cross_file_same_content_no_conflict(self):
+        """Same key with the same line content across files → no conflict."""
+        sections_a = [SectionInfo(title="NODE_ENV", level=1, line_range=LineRange(1, 1))]
+        sections_b = [SectionInfo(title="NODE_ENV", level=1, line_range=LineRange(1, 1))]
+        lines = ["NODE_ENV=production"]
+        meta_a = _make_meta(".env.staging", sections_a, lines=[""] + lines)
+        meta_b = _make_meta(".env.prod", sections_b, lines=[""] + lines)
+        issues = check_duplicates({".env.staging": meta_a, ".env.prod": meta_b})
+        cross = [i for i in issues if i.check == "duplicate" and i.key == "NODE_ENV"]
+        assert len(cross) == 0
+
+    def test_cross_file_single_file_no_conflict(self):
+        """Single file with no duplicate keys → no cross-file issues."""
+        sections = [
+            SectionInfo(title="HOST", level=1, line_range=LineRange(1, 1)),
+            SectionInfo(title="PORT", level=1, line_range=LineRange(2, 2)),
+        ]
+        meta = _make_meta("config.env", sections, lines=["", "HOST=localhost", "PORT=3000"])
+        issues = check_duplicates({"config.env": meta})
+        assert len(issues) == 0
+
+
+# ---------------------------------------------------------------------------
+# TestCheckSecrets
+# ---------------------------------------------------------------------------
+
+
+def _make_simple_meta(source_name: str, lines: list[str]):
+    """Build a minimal StructuralMetadata from a list of raw lines.
+
+    Lines are stored with a leading empty string so that lines[1] == first
+    line of content (matching the convention used by _make_meta above).
+    """
+    stored = [""] + lines  # index 0 unused, index N == line N
+    return _make_meta(source_name, sections=[], lines=stored)
+
+
+class TestCheckSecrets:
+    # ------------------------------------------------------------------ #
+    # Known prefixes                                                       #
+    # ------------------------------------------------------------------ #
+
+    def test_sk_prefix_is_error(self):
+        """sk- prefix → severity error."""
+        meta = _make_simple_meta("app.env", ["OPENAI_KEY=sk-abcdefghijklmnopqrstuvwxyz1234567890"])
+        issues = check_secrets({"app.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+        assert any(i.severity == "error" for i in secrets)
+
+    def test_ghp_prefix_detected(self):
+        """ghp_ prefix → detected."""
+        meta = _make_simple_meta("app.env", ["GITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"])
+        issues = check_secrets({"app.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+
+    def test_begin_private_key_detected(self):
+        """-----BEGIN prefix → detected."""
+        meta = _make_simple_meta(
+            "secrets.env",
+            ["PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----MIIEowIBAAKCAQEA"],
+        )
+        issues = check_secrets({"secrets.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+        assert any(i.severity == "error" for i in secrets)
+
+    # ------------------------------------------------------------------ #
+    # Suspicious key names                                                 #
+    # ------------------------------------------------------------------ #
+
+    def test_suspicious_key_password(self):
+        """Key named 'password' with a value → detected."""
+        meta = _make_simple_meta("config.env", ["password=s3cr3tP@ssw0rd!"])
+        issues = check_secrets({"config.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+
+    # ------------------------------------------------------------------ #
+    # URL with embedded credentials                                        #
+    # ------------------------------------------------------------------ #
+
+    def test_url_with_credentials(self):
+        """DATABASE_URL with user:pass@ → detected as warning."""
+        meta = _make_simple_meta(
+            "app.env",
+            ["DATABASE_URL=postgres://admin:supersecret@db.example.com:5432/mydb"],
+        )
+        issues = check_secrets({"app.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+        assert any(i.severity == "warning" for i in secrets)
+
+    # ------------------------------------------------------------------ #
+    # High entropy                                                         #
+    # ------------------------------------------------------------------ #
+
+    def test_high_entropy_value(self):
+        """A high-entropy 32-char string → detected."""
+        # This string has mixed case + digits + symbols → high entropy
+        meta = _make_simple_meta(
+            "app.env",
+            ["SESSION_SECRET=aB3$kX9!mQ2#nZ7@pR5&wT1^yU8*vS4%"],
+        )
+        issues = check_secrets({"app.env": meta})
+        secrets = [i for i in issues if i.check == "secret"]
+        assert len(secrets) >= 1
+
+    # ------------------------------------------------------------------ #
+    # Normal values — must NOT be flagged                                  #
+    # ------------------------------------------------------------------ #
+
+    def test_normal_port_not_flagged(self):
+        """PORT=8080 should not be flagged."""
+        meta = _make_simple_meta("app.env", ["PORT=8080"])
+        issues = check_secrets({"app.env": meta})
+        assert len(issues) == 0
+
+    def test_normal_host_not_flagged(self):
+        """HOST=localhost should not be flagged."""
+        meta = _make_simple_meta("app.env", ["HOST=localhost"])
+        issues = check_secrets({"app.env": meta})
+        assert len(issues) == 0
+
+    def test_debug_true_not_flagged(self):
+        """DEBUG=true should not be flagged."""
+        meta = _make_simple_meta("app.env", ["DEBUG=true"])
+        issues = check_secrets({"app.env": meta})
+        assert len(issues) == 0
+
+    # ------------------------------------------------------------------ #
+    # UUID not flagged (even though it is long / looks random)             #
+    # ------------------------------------------------------------------ #
+
+    def test_uuid_not_flagged(self):
+        """A UUID value should be excluded from entropy check."""
+        meta = _make_simple_meta(
+            "app.env",
+            ["APP_ID=550e8400-e29b-41d4-a716-446655440000"],
+        )
+        issues = check_secrets({"app.env": meta})
+        # UUID must not trigger high-entropy warning
+        entropy_issues = [
+            i for i in issues if i.check == "secret" and "entropy" in i.message.lower()
+        ]
+        assert len(entropy_issues) == 0
+
+    # ------------------------------------------------------------------ #
+    # Masked value in detail                                               #
+    # ------------------------------------------------------------------ #
+
+    def test_masked_value_in_detail(self):
+        """The full secret must NOT appear in the detail field — only masked."""
+        secret = "sk-abcdefghijklmnopqrstuvwxyz1234567890"
+        meta = _make_simple_meta("app.env", [f"OPENAI_KEY={secret}"])
+        issues = check_secrets({"app.env": meta})
+        secrets = [i for i in issues if i.check == "secret" and i.severity == "error"]
+        assert len(secrets) >= 1
+        issue = secrets[0]
+        # The full secret must not be in the detail
+        assert secret not in (issue.detail or "")
+        # But the masked form (****) must be present
+        assert "****" in (issue.detail or "")
+
+    def test_docker_image_template_not_flagged(self):
+        """Compose image placeholders are not secrets."""
+        meta = _make_simple_meta("docker-compose.yml", ["image: ghcr.io/org/repo:${TAG}"])
+        issues = check_secrets({"docker-compose.yml": meta})
+        assert issues == []
+
+    def test_log4j_pattern_not_flagged(self):
+        """PatternLayout strings should not trip entropy detection."""
+        meta = _make_simple_meta(
+            "log4j2.yaml",
+            ['pattern: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"'],
+        )
+        issues = check_secrets({"log4j2.yaml": meta})
+        assert issues == []
+
+    def test_template_placeholder_not_flagged(self):
+        """Template placeholders should not be treated as hardcoded secrets."""
+        meta = _make_simple_meta("app.env", ["API_KEY=${OPENAI_API_KEY}"])
+        issues = check_secrets({"app.env": meta})
+        assert issues == []
+
+    def test_flow_style_structured_value_not_flagged_as_entropy(self):
+        """Inline structured YAML config should not trip entropy detection."""
+        meta = _make_simple_meta(
+            "config/deploy/local.yaml",
+            ["trades: { latenessMs: 100, latePolicy: apply, reorderBufferSize: 32 }"],
+        )
+        issues = check_secrets({"config/deploy/local.yaml": meta})
+        assert issues == []
+
+
+# ---------------------------------------------------------------------------
+# TestCheckOrphans
+# ---------------------------------------------------------------------------
+
+
+def _make_code_meta(source_name: str, lines: list[str]) -> StructuralMetadata:
+    """Build a minimal StructuralMetadata for a code file (no sections)."""
+    return StructuralMetadata(
+        source_name=source_name,
+        total_lines=len(lines),
+        total_chars=sum(len(line) for line in lines),
+        lines=lines,
+        line_char_offsets=[0] * len(lines),
+    )
+
+
+def _make_config_with_key(source_name: str, key: str, line_no: int = 1) -> StructuralMetadata:
+    """Build a config StructuralMetadata with a single level-1 section."""
+    section = SectionInfo(
+        title=key,
+        level=1,
+        line_range=LineRange(start=line_no, end=line_no),
+    )
+    lines = [""] + [f"{key}=value"]
+    return _make_meta(source_name, sections=[section], lines=lines)
+
+
+class TestCheckOrphans:
+    def test_orphan_key_not_in_code_is_flagged(self):
+        """A config key absent from all code → orphan warning."""
+        config = {"app.env": _make_config_with_key("app.env", "DB_HOST")}
+        code = {"main.py": _make_code_meta("main.py", ["x = 1", 'print("hello")'])}
+        issues = check_orphans(config, code)
+        orphans = [i for i in issues if i.check == "orphan"]
+        assert any(i.key == "DB_HOST" for i in orphans), (
+            f"Expected DB_HOST as orphan, got: {[i.key for i in issues]}"
+        )
+
+    def test_used_key_via_os_environ_not_flagged(self):
+        """os.environ["DB_HOST"] in code → key should NOT be an orphan."""
+        config = {"app.env": _make_config_with_key("app.env", "DB_HOST")}
+        code = {"main.py": _make_code_meta("main.py", ['host = os.environ["DB_HOST"]'])}
+        issues = check_orphans(config, code)
+        orphans = [i for i in issues if i.check == "orphan" and i.key == "DB_HOST"]
+        assert orphans == [], f"DB_HOST should not be orphan, got: {orphans}"
+
+    def test_ghost_key_in_code_not_in_config_flagged(self):
+        """STRIPE_KEY referenced via os.getenv but absent from config → ghost."""
+        config: dict = {}
+        code = {"billing.py": _make_code_meta("billing.py", ["key = os.getenv('STRIPE_KEY', '')"])}
+        issues = check_orphans(config, code)
+        ghosts = [i for i in issues if i.check == "ghost"]
+        assert any(i.key == "STRIPE_KEY" for i in ghosts), (
+            f"Expected STRIPE_KEY as ghost, got: {[i.key for i in issues]}"
+        )
+
+    def test_process_env_key_recognized_as_used(self):
+        """process.env.API_KEY in TS code → key should NOT be an orphan."""
+        config = {"app.env": _make_config_with_key("app.env", "API_KEY")}
+        code = {"server.ts": _make_code_meta("server.ts", ["const key = process.env.API_KEY;"])}
+        issues = check_orphans(config, code)
+        orphans = [i for i in issues if i.check == "orphan" and i.key == "API_KEY"]
+        assert orphans == [], f"API_KEY should not be orphan, got: {orphans}"
+
+    def test_java_system_getenv_key_recognized_as_used(self):
+        """System.getenv(\"API_KEY\") in Java code → key should NOT be an orphan."""
+        config = {"app.env": _make_config_with_key("app.env", "API_KEY")}
+        code = {
+            "Main.java": _make_code_meta(
+                "Main.java",
+                ['String key = System.getenv("API_KEY");'],
+            )
+        }
+        issues = check_orphans(config, code)
+        orphans = [i for i in issues if i.check == "orphan" and i.key == "API_KEY"]
+        assert orphans == [], f"API_KEY should not be orphan, got: {orphans}"
+
+    def test_java_system_property_missing_from_config_is_ghost(self):
+        """System.getProperty(\"APP_PORT\") with no config entry → ghost."""
+        code = {
+            "Main.java": _make_code_meta(
+                "Main.java",
+                ['String port = System.getProperty("APP_PORT");'],
+            )
+        }
+        issues = check_orphans({}, code)
+        ghosts = [i for i in issues if i.check == "ghost"]
+        assert any(i.key == "APP_PORT" for i in ghosts)
+
+    def test_orphan_config_file_basename_not_in_code(self):
+        """Config file whose basename never appears in code → orphan_file."""
+        config = {"secrets.env": _make_config_with_key("secrets.env", "MY_KEY")}
+        # Code mentions MY_KEY but never "secrets.env"
+        code = {"app.py": _make_code_meta("app.py", ['val = os.environ["MY_KEY"]'])}
+        issues = check_orphans(config, code)
+        file_issues = [i for i in issues if i.check == "orphan_file"]
+        assert any("secrets.env" in i.message for i in file_issues), (
+            f"Expected orphan_file for secrets.env, got: {[i.message for i in issues]}"
+        )
+
+    def test_referenced_config_file_not_flagged(self):
+        """Config file basename present in code → no orphan_file."""
+        config = {"app.env": _make_config_with_key("app.env", "PORT")}
+        code = {
+            "loader.py": _make_code_meta(
+                "loader.py",
+                ['load_dotenv("app.env")', 'port = os.environ["PORT"]'],
+            )
+        }
+        issues = check_orphans(config, code)
+        file_issues = [i for i in issues if i.check == "orphan_file"]
+        assert file_issues == [], f"app.env should not be orphan_file, got: {file_issues}"
+
+    def test_no_code_files_all_keys_orphan(self):
+        """With no code files every config key is an orphan."""
+        config = {
+            "a.env": _make_config_with_key("a.env", "FOO"),
+        }
+        issues = check_orphans(config, {})
+        orphans = [i for i in issues if i.check == "orphan"]
+        assert any(i.key == "FOO" for i in orphans)
+
+    def test_empty_config_and_code_no_issues(self):
+        """Empty inputs produce no issues."""
+        assert check_orphans({}, {}) == []
+
+    def test_convention_loaded_files_not_flagged_as_orphans(self):
+        """Build/runtime convention files should not require filename references."""
+        config = {
+            "gradle.properties": _make_config_with_key("gradle.properties", "ORG_GRADLE_PROJECT"),
+            "gradle/wrapper/gradle-wrapper.properties": _make_config_with_key(
+                "gradle/wrapper/gradle-wrapper.properties", "distributionUrl"
+            ),
+            "ui/package.json": _make_config_with_key("ui/package.json", "name"),
+            "deployment/docker-compose.local.yml": _make_config_with_key(
+                "deployment/docker-compose.local.yml", "services"
+            ),
+            "config/deploy/local.yaml": _make_config_with_key("config/deploy/local.yaml", "trades"),
+            ".github/workflows/ci.yml": _make_config_with_key(".github/workflows/ci.yml", "jobs"),
+            "application.yaml": _make_config_with_key("application.yaml", "server"),
+            "log4j2.xml": _make_config_with_key("log4j2.xml", "Configuration"),
+        }
+        code = {"app.py": _make_code_meta("app.py", ["print('hello')"])}
+        issues = check_orphans(config, code)
+        orphan_files = [i for i in issues if i.check == "orphan_file"]
+        assert orphan_files == []
+
+    def test_convention_keys_and_vite_ghosts_are_not_flagged(self):
+        config = {
+            "ui/package.json": _make_config_with_key("ui/package.json", "scripts"),
+            "ui/tsconfig.json": _make_config_with_key("ui/tsconfig.json", "compilerOptions"),
+        }
+        code = {
+            "ui/src/main.ts": _make_code_meta(
+                "ui/src/main.ts",
+                ["const api = import.meta.env.VITE_API_URL;"],
+            )
+        }
+
+        issues = check_orphans(config, code)
+
+        assert not any(i.check == "orphan" and i.key in {"scripts", "compilerOptions"} for i in issues)
+        assert not any(i.check == "ghost" and i.key == "VITE_API_URL" for i in issues)
+
+    def test_test_only_ghost_keys_are_not_flagged(self):
+        code = {
+            "tests/test_config.py": _make_code_meta(
+                "tests/test_config.py",
+                ['value = os.getenv("UW_SUB_JSON")'],
+            )
+        }
+
+        issues = check_orphans({}, code)
+
+        assert not any(i.check == "ghost" and i.key == "UW_SUB_JSON" for i in issues)
+
+
+# ---------------------------------------------------------------------------
+# Helpers for analyze_config tests
+# ---------------------------------------------------------------------------
+
+
+def _make_simple_struct(source_name: str, lines: list[str]) -> StructuralMetadata:
+    return StructuralMetadata(
+        source_name=source_name,
+        total_lines=len(lines),
+        total_chars=sum(len(line) for line in lines),
+        lines=lines,
+        line_char_offsets=[0] * len(lines),
+        sections=[],
+    )
+
+
+def _make_index(files: dict[str, StructuralMetadata]) -> ProjectIndex:
+    return ProjectIndex(
+        root_path="/fake/project",
+        files=files,
+        total_files=len(files),
+        total_lines=sum(m.total_lines for m in files.values()),
+    )
+
+
+# ---------------------------------------------------------------------------
+# TestIsConfigFile / TestIsCodeFile
+# ---------------------------------------------------------------------------
+
+
+class TestIsConfigFile:
+    def test_yaml_is_config(self):
+        assert _is_config_file("settings.yaml") is True
+
+    def test_env_extension_is_config(self):
+        assert _is_config_file("prod.env") is True
+
+    def test_dotenv_basename_is_config(self):
+        assert _is_config_file("/project/.env.local") is True
+
+    def test_py_is_not_config(self):
+        assert _is_config_file("app.py") is False
+
+    def test_json_is_config(self):
+        assert _is_config_file("config.json") is True
+
+    def test_tf_is_config(self):
+        assert _is_config_file("main.tf") is True
+
+
+class TestIsCodeFile:
+    def test_py_is_code(self):
+        assert _is_code_file("app.py") is True
+
+    def test_ts_is_code(self):
+        assert _is_code_file("index.ts") is True
+
+    def test_yaml_is_not_code(self):
+        assert _is_code_file("settings.yaml") is False
+
+    def test_go_is_code(self):
+        assert _is_code_file("main.go") is True
+
+    def test_java_is_code(self):
+        assert _is_code_file("Main.java") is True
+
+
+# ---------------------------------------------------------------------------
+# TestFormatIssues
+# ---------------------------------------------------------------------------
+
+
+class TestFormatIssues:
+    def _make_issue(self, severity: str, check: str) -> ConfigIssue:
+        return ConfigIssue(
+            file="settings.yaml",
+            key="KEY",
+            line=1,
+            severity=severity,
+            check=check,
+            message=f"A {severity} {check} issue",
+            detail=None,
+        )
+
+    def test_zero_issues_message(self):
+        result = _format_issues([], "all")
+        assert result.startswith("VERDICT: CONSISTENT")
+        assert "0 issues" in result
+
+    def test_header_contains_count(self):
+        issues = [self._make_issue("warning", "duplicate")]
+        result = _format_issues(issues, "all")
+        assert "Config Analysis -- 1 issues found" in result
+
+    def test_groups_by_check(self):
+        issues = [
+            self._make_issue("error", "secret"),
+            self._make_issue("warning", "duplicate"),
+        ]
+        result = _format_issues(issues, "all")
+        assert "-- secret (1) --" in result
+        assert "-- duplicate (1) --" in result
+
+    def test_severity_filter_error_excludes_warnings(self):
+        issues = [
+            self._make_issue("error", "secret"),
+            self._make_issue("warning", "duplicate"),
+        ]
+        result = _format_issues(issues, "error")
+        assert "secret" in result
+        assert "duplicate" not in result
+
+    def test_severity_filter_warning_includes_errors(self):
+        issues = [
+            self._make_issue("error", "secret"),
+            self._make_issue("warning", "duplicate"),
+        ]
+        result = _format_issues(issues, "warning")
+        assert "secret" in result
+        assert "duplicate" in result
+
+    def test_severity_filter_error_all_warnings_gives_zero(self):
+        issues = [self._make_issue("warning", "orphan")]
+        result = _format_issues(issues, "error")
+        assert result.startswith("VERDICT: CONSISTENT")
+        assert "0 issues" in result
+
+    def test_compact_format_no_detail(self):
+        issue = ConfigIssue(
+            file="app.env",
+            key="SECRET",
+            line=5,
+            severity="error",
+            check="secret",
+            message="Hardcoded secret",
+            detail="Value: sk-***",
+        )
+        result = _format_issues([issue], "all")
+        assert "[error] app.env:5 Hardcoded secret" in result
+        assert "(Value: sk-***)" not in result
+
+
+# ---------------------------------------------------------------------------
+# TestAnalyzeConfig
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeConfig:
+    """Tests for the main analyze_config() entry point."""
+
+    def _env_meta(self, name: str = "config.env") -> StructuralMetadata:
+        """A minimal .env config file with no known issues."""
+        return _make_simple_struct(name, ["", "PORT=8080", "DEBUG=true"])
+
+    def _py_meta(self, name: str = "app.py") -> StructuralMetadata:
+        return _make_simple_struct(name, ["", "import os", "port = os.environ['PORT']"])
+
+    # --- No config files ---
+
+    def test_no_config_files_returns_zero_message(self):
+        """Index with only .py files → 'no config files' message."""
+        index = _make_index({"app.py": self._py_meta()})
+        result = analyze_config(index)
+        assert "0 config files found in project" in result
+
+    def test_empty_index_returns_zero_message(self):
+        index = _make_index({})
+        result = analyze_config(index)
+        assert "0 config files found in project" in result
+
+    # --- Default checks run ---
+
+    def test_default_checks_result_contains_header(self):
+        """With a config file present the result always starts with 'Config Analysis'."""
+        index = _make_index(
+            {
+                "config.env": self._env_meta(),
+                "app.py": self._py_meta(),
+            }
+        )
+        result = analyze_config(index)
+        assert result.startswith("Config Analysis")
+
+    # --- Specific checks ---
+
+    def test_only_duplicates_check_runs(self):
+        """Requesting ['duplicates'] does not run secrets or orphans."""
+        # Insert a known-secret value so we can confirm secrets check didn't run
+        secret_meta = _make_simple_struct(
+            "secrets.env",
+            [
+                "",
+                "API_KEY=sk-abcdefghijklmnopqrstuvwxyz1234567890",
+            ],
+        )
+        index = _make_index({"secrets.env": secret_meta})
+        result = analyze_config(index, checks=["duplicates"])
+        # secrets check not requested — its output group shouldn't appear
+        assert "-- secret" not in result
+
+    def test_only_secrets_check_runs(self):
+        """Requesting ['secrets'] surfaces a hardcoded secret."""
+        secret_meta = _make_simple_struct(
+            "creds.env",
+            [
+                "",
+                "API_KEY=sk-abcdefghijklmnopqrstuvwxyz1234567890",
+            ],
+        )
+        index = _make_index({"creds.env": secret_meta})
+        result = analyze_config(index, checks=["secrets"])
+        assert "-- secret" in result
+
+    # --- Severity filter ---
+
+    def test_severity_error_filter_hides_warnings(self):
+        """severity='error' keeps only error-level issues."""
+        # orphan issues are warning-level; inject no error issues
+        orphan_meta = _make_simple_struct(
+            "settings.yaml",
+            [
+                "",
+                "UNUSED_KEY: value",
+            ],
+        )
+        index = _make_index({"settings.yaml": orphan_meta})
+        result = analyze_config(index, checks=["orphans"], severity="error")
+        # All orphan issues are warnings → filtered out
+        assert "VERDICT: CONSISTENT" in result
+
+    def test_severity_error_still_shows_error_issues(self):
+        """severity='error' preserves genuine error-level secrets."""
+        secret_meta = _make_simple_struct(
+            "prod.env",
+            [
+                "",
+                "TOKEN=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            ],
+        )
+        index = _make_index({"prod.env": secret_meta})
+        result = analyze_config(index, checks=["secrets"], severity="error")
+        assert "-- secret" in result
+
+    # --- file_path filter ---
+
+    def test_file_path_restricts_to_one_file(self):
+        """When file_path is given, only that file is analysed."""
+        secret_meta = _make_simple_struct(
+            "prod.env",
+            [
+                "",
+                "TOKEN=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            ],
+        )
+        clean_meta = _make_simple_struct("dev.env", ["", "PORT=3000"])
+        index = _make_index({"prod.env": secret_meta, "dev.env": clean_meta})
+        result = analyze_config(index, checks=["secrets"], file_path="prod.env")
+        assert "prod.env" in result
+
+    def test_file_path_nonexistent_gives_zero_config(self):
+        """Specifying a file_path that doesn't exist → 0 config files message."""
+        index = _make_index({"config.env": self._env_meta()})
+        result = analyze_config(index, file_path="nonexistent.env")
+        assert "0 config files found in project" in result
+
+    def test_file_path_code_file_gives_zero_config(self):
+        """Specifying a code file as file_path → 0 config files message."""
+        index = _make_index({"app.py": self._py_meta()})
+        result = analyze_config(index, file_path="app.py")
+        assert "0 config files found in project" in result
+
+    # --- dotenv basename detection ---
+
+    def test_dotenv_basename_recognized_as_config(self):
+        """'.env.production' should be treated as a config file."""
+        meta = _make_simple_struct(".env.production", ["", "SECRET=plaintext"])
+        index = _make_index({".env.production": meta})
+        result = analyze_config(index)
+        assert result.startswith("Config Analysis")
+
+    def test_xml_files_are_skipped(self):
+        """XML files should not be parsed by the YAML/config analyzer."""
+        xml_meta = _make_simple_struct("log4j2.xml", ["<Configuration></Configuration>"])
+        index = _make_index({"log4j2.xml": xml_meta})
+        result = analyze_config(index)
+        assert "0 config files found in project" in result

@@ -1,0 +1,11 @@
+- [ ] Tool confirmation dialog
+- [ ] More commands (/checkpoint, /revert, /commit, /mcp, /cost)
+- [ ] Documentation
+- [ ] Persistent chat history
+- [ ] Lets user custom tool UI: here is how:
+  - [ ] convert <Box> to <div> and className
+  - [ ] convert <Text> to <span> and className
+- [ ] Proper release process (changeset + changelog)
+- [ ] Add more tests
+- [ ] Codebase index: automatically sync
+- [ ] Codebase index: better model selection

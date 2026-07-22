@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  moa-aggregator:
+    build:
+      context: ./packages/free-llm-proxy
+      dockerfile: Dockerfile
+    ports:
+      - "8007:8007"
+    env_file: .env
+    environment:
+      - MOA_AGGREGATOR_PORT=8007
+      - MOA_WORKER_COUNT=3
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  moa-worker-1:
+    build:
+      context: ./packages/free-llm-proxy
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - MOA_WORKER_ID=1
+      - MOA_ROLE=worker
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - moa-aggregator
+    restart: unless-stopped
+
+  moa-worker-2:
+    build:
+      context: ./packages/free-llm-proxy
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - MOA_WORKER_ID=2
+      - MOA_ROLE=worker
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - moa-aggregator
+    restart: unless-stopped
+
+volumes:
+  redis-data:

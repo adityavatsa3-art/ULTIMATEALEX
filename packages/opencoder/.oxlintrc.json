@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    "import"
+  ],
+  "rules": {
+    "no-alert": "error",
+    "oxc/approx-constant": "warn",
+    "no-unused-vars": "off",
+    "no-this-alias": "off",
+    "no-plusplus": "off"
+  }
+}

@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`handling model stream error during response generation > stream error - final state 1`] = `
+"
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ > Trigger the error stream                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  / for commands                                                     alt + ⏎ for newline ·0 tokens"
+`;
+
+exports[`handling model stream error during response generation > stream error - initial 1`] = `
+"
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  / for commands                                                     alt + ⏎ for newline ·0 tokens"
+`;

@@ -1,0 +1,25 @@
+{
+  "name": "omni-llm-suite",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "gateway": "dotnet run --project apps/gateway",
+    "start:all": "pwsh scripts/start-all.ps1",
+    "stop:all": "pwsh scripts/stop-all.ps1",
+    "setup": "pwsh scripts/setup-windows.ps1",
+    "health": "pwsh scripts/health-check.ps1",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^2.1.0"
+  }
+}

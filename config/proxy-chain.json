@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "strategy": "sequential_fallback",
+  "healthCheckIntervalMs": 15000,
+  "circuitBreaker": {
+    "failureThreshold": 5,
+    "resetTimeoutMs": 30000,
+    "halfOpenMaxRequests": 2
+  },
+  "chain": [
+    {
+      "name": "rotato",
+      "url": "http://localhost:8990",
+      "priority": 1,
+      "capabilities": ["key_rotation", "load_balancing"],
+      "retryOn": [401, 403, 429]
+    },
+    {
+      "name": "claude-cruise",
+      "url": "http://localhost:4141",
+      "priority": 2,
+      "capabilities": ["model_switching", "429_fallback"],
+      "retryOn": [429, 503]
+    },
+    {
+      "name": "moa-aggregator",
+      "url": "http://localhost:8007",
+      "priority": 3,
+      "capabilities": ["mixture_of_agents", "multi_provider"],
+      "retryOn": [500, 502, 503]
+    }
+  ],
+  "modelRouting": {
+    "claude-*": ["rotato", "claude-cruise"],
+    "gpt-*": ["rotato", "moa-aggregator"],
+    "gemini-*": ["moa-aggregator"],
+    "llama*": ["moa-aggregator"],
+    "default": ["rotato", "claude-cruise", "moa-aggregator"]
+  }
+}

@@ -1,0 +1,26 @@
+providers:
+  anthropic:
+    rateLimit: 60
+    window: 60s
+    burst: 10
+    retryAfter: 60
+  openrouter:
+    rateLimit: 200
+    window: 60s
+    burst: 20
+    retryAfter: 30
+  gemini:
+    rateLimit: 60
+    window: 60s
+    burst: 15
+    retryAfter: 60
+  ollama:
+    rateLimit: 1000
+    window: 60s
+    burst: 100
+    retryAfter: 1
+  default:
+    rateLimit: 50
+    window: 60s
+    burst: 5
+    retryAfter: 60

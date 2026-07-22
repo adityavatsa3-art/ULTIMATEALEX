@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "token-savior-recall"
+version = "4.9.0"
+description = "Optimized MCP server for AI coding agents. Structural codebase navigation + persistent memory engine — 97.9% accuracy at −80% tokens on tsbench."
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Mibay"},
+]
+keywords = ["mcp", "codebase", "indexer", "code-navigation", "structural-analysis", "c", "glsl", "python", "typescript", "go", "rust"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "PyYAML>=6.0",
+    "tree-sitter>=0.25,<0.26",
+    "tree-sitter-java>=0.23,<0.24",
+    "tree-sitter-ruby>=0.23,<0.24",
+    "watchfiles>=0.20",
+]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.25"]
+dev = ["build>=1.2", "pytest>=8.0", "ruff>=0.5"]
+benchmark = ["aiohttp>=3.9"]
+memory-vector = ["sqlite-vec>=0.1", "fastembed>=0.4", "onnxruntime>=1.16"]
+
+[project.scripts]
+ts = "token_savior.cli:main"
+token-savior = "token_savior.server:main_sync"
+token-savior-dashboard = "token_savior.dashboard:main"
+token-savior-bench = "benchmarks.run_benchmarks:main"
+
+[project.urls]
+Homepage = "https://github.com/Mibayy/token-savior"
+Repository = "https://github.com/Mibayy/token-savior"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/token_savior"]
+
+# Include the hooks/ directory inside the wheel under token_savior/hooks/ so
+# `ts init` can locate the bundled JSON configs and shell scripts after a
+# vanilla `pip install token-savior-recall` (no editable / source checkout).
+[tool.hatch.build.targets.wheel.force-include]
+"hooks" = "token_savior/hooks"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

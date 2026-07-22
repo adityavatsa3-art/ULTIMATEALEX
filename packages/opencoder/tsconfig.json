@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "jsx": "react",
+    // Environment setup & latest features
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2023"
+    ],
+    "moduleDetection": "force",
+    "module": "NodeNext",
+    // Bundler mode
+    "moduleResolution": "nodenext",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
+    "allowJs": true,
+    "incremental": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    // Best practices
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": true,
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "./dist",
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "vite.config.ts",
+    "coder.d.ts",
+    "src",
+    "package.json",
+  ]
+}
