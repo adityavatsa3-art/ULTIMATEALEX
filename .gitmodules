@@ -1,0 +1,12 @@
+[submodule "packages/jwt-tool"]
+	path = packages/jwt-tool
+	url = https://github.com/ticarpi/jwt_tool.git
+[submodule "packages/keyhacks"]
+	path = packages/keyhacks
+	url = https://github.com/streaak/keyhacks.git
+[submodule "packages/trufflehog"]
+	path = packages/trufflehog
+	url = https://github.com/trufflesecurity/trufflehog.git
+[submodule "packages/awesome-hacking"]
+	path = packages/awesome-hacking
+	url = https://github.com/Hack-with-Github/Awesome-Hacking.git
