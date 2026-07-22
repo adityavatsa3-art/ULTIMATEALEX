@@ -16,6 +16,35 @@
       "env": {
         "CAVEMAN_COMPRESSION_LEVEL": "max"
       }
+    },
+    "git-mcp": {
+      "command": "node",
+      "args": ["packages/git-mcp/dist/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "mcp-filesystem": {
+      "command": "node",
+      "args": ["packages/mcp-servers/src/filesystem/dist/index.js", "C:/adi/vectorfiscal"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "mcp-memory": {
+      "command": "node",
+      "args": ["packages/mcp-servers/src/memory/dist/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "fastmcp": {
+      "command": "uv",
+      "args": ["run", "fastmcp", "run", "server.py"],
+      "cwd": "./packages/fastmcp",
+      "env": {
+        "PYTHONPATH": "."
+      }
     }
   }
 }
