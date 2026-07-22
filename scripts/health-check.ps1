@@ -29,8 +29,7 @@ $services = @(
     @{ Name = "Dashboard";     Url = "http://localhost:3000" },
     @{ Name = "Rotato";        Url = "http://localhost:$rotatoPort/health" },
     @{ Name = "Claude Cruise"; Url = "http://localhost:$cruisePort/health" },
-    @{ Name = "MOA";           Url = "http://localhost:$moaPort/health" },
-    @{ Name = "Token Savior";  Url = "http://localhost:$tsPort/health" }
+    @{ Name = "MOA";           Url = "http://localhost:$moaPort/health" }
 )
 
 Write-Host "`n========================================================" -ForegroundColor Cyan

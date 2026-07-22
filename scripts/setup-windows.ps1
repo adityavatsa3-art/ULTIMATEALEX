@@ -102,8 +102,6 @@ Write-Step "Checking integrated packages in packages/..."
 
 $repos = @(
     @{ Url = "https://github.com/rtk-ai/rtk.git";                             Dir = "packages/rtk" }
-    @{ Url = "https://github.com/JuliusBrussee/caveman.git";                   Dir = "packages/caveman" }
-    @{ Url = "https://github.com/Mibayy/token-savior.git";                     Dir = "packages/token-savior" }
     @{ Url = "https://github.com/amitlals/claude-cruise.git";                  Dir = "packages/claude-cruise" }
     @{ Url = "https://github.com/ducan-ne/opencoder.git";                      Dir = "packages/opencoder" }
     @{ Url = "https://github.com/xor0110xor-prog/free-llm-proxy-mixture.git"; Dir = "packages/free-llm-proxy" }

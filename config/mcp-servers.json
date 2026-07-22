@@ -1,22 +1,5 @@
 {
   "mcpServers": {
-    "token-savior": {
-      "command": "uv",
-      "args": ["run", "token-savior"],
-      "cwd": "./packages/token-savior",
-      "env": {
-        "TS_BASH_COMPACT": "1",
-        "TS_BASH_REWRITE": "1",
-        "DB_PATH": "./data/token-savior.db"
-      }
-    },
-    "caveman": {
-      "command": "node",
-      "args": ["packages/caveman/dist/index.js"],
-      "env": {
-        "CAVEMAN_COMPRESSION_LEVEL": "max"
-      }
-    },
     "git-mcp": {
       "command": "node",
       "args": ["packages/git-mcp/dist/index.js"],

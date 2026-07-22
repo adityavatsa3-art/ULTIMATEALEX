@@ -54,8 +54,6 @@ importers:
 
   lib/shared-types: {}
 
-  packages/caveman: {}
-
   packages/claude-cruise:
     dependencies:
       '@hono/node-server':

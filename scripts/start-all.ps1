@@ -72,16 +72,7 @@ if ($cruiseEntry) {
     Write-Host "   ⚠️  Claude Cruise entry not found" -ForegroundColor Yellow
 }
 
-# ─── Token Savior (MCP, Python) ──────────────────────────
-Write-Host "🔐 Starting Token Savior MCP (port $TS_PORT)..." -ForegroundColor Cyan
-if (Test-Path ".venv\Scripts\activate.ps1") {
-    Start-Process -FilePath "powershell" `
-        -ArgumentList "-NoProfile -Command `".\.venv\Scripts\activate.ps1; uv run token-savior`"" `
-        -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
-    Write-Host "   [OK] Token Savior started" -ForegroundColor Green
-} else {
-    Write-Host "   ⚠️  Python venv not found — run setup-windows.ps1 first" -ForegroundColor Yellow
-}
+
 
 # ─── Gateway (.NET 8) ─────────────────────────────────────
 Write-Host "🌐 Starting Gateway (.NET 8, port $GATEWAY_PORT)..." -ForegroundColor Cyan
