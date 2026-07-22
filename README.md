@@ -1,6 +1,6 @@
 # 🦌 Omni-LLM-Suite
 
-> A unified, Windows-native monorepo combining 12 open-source AI & security tools into a single fully executable stack.
+> A unified, Windows-native monorepo combining 16 open-source AI, MCP & security tools into a single fully executable stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](scripts/setup-windows.ps1)
@@ -34,6 +34,10 @@ Client → Gateway (:8080) → Rotato (:8990) → Claude Cruise (:4141) → MOA 
 | **keyhacks** | streaak/keyhacks | API keys validation & checks |
 | **trufflehog** | trufflesecurity/trufflehog | Secret scanning & credential detection |
 | **awesome-hacking** | Hack-with-Github/Awesome-Hacking | Security reference database |
+| **mcp-servers** | modelcontextprotocol/servers | Official MCP reference servers |
+| **git-mcp** | idosal/git-mcp | Git MCP server |
+| **awesome-mcp-servers** | wong2/awesome-mcp-servers | Curated MCP server directory |
+| **fastmcp** | PrefectHQ/fastmcp | Fast Python MCP server framework |
 
 ## 🚀 Quick Start (Windows)
 

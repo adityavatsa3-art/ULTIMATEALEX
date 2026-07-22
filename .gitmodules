@@ -10,3 +10,15 @@
 [submodule "packages/awesome-hacking"]
 	path = packages/awesome-hacking
 	url = https://github.com/Hack-with-Github/Awesome-Hacking.git
+[submodule "packages/mcp-servers"]
+	path = packages/mcp-servers
+	url = https://github.com/modelcontextprotocol/servers.git
+[submodule "packages/git-mcp"]
+	path = packages/git-mcp
+	url = https://github.com/idosal/git-mcp.git
+[submodule "packages/awesome-mcp-servers"]
+	path = packages/awesome-mcp-servers
+	url = https://github.com/wong2/awesome-mcp-servers.git
+[submodule "packages/fastmcp"]
+	path = packages/fastmcp
+	url = https://github.com/PrefectHQ/fastmcp.git
