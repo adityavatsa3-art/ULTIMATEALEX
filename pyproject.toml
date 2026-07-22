@@ -4,8 +4,7 @@ version = "1.0.0"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]
-members = ["packages/token-savior", "packages/free-llm-proxy"]
+members = ["packages/token-savior"]
 
 [tool.uv.sources]
 token-savior = { workspace = true }
-free-llm-proxy = { workspace = true }

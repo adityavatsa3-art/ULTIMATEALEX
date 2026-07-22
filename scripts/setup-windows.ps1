@@ -137,7 +137,6 @@ uv venv .venv --python 3.12 2>$null
 if (Test-Path ".\.venv\Scripts\activate.ps1") {
     & .\.venv\Scripts\activate.ps1 2>$null
     uv pip install -e packages/token-savior 2>$null
-    uv pip install -e packages/free-llm-proxy 2>$null
 }
 Pop-Location
 Write-Ok "Python venv ready at .venv/"
