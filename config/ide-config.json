@@ -1,0 +1,27 @@
+{
+  "ide": "OpenWork AI Workspace & Integrated IDEs",
+  "version": "1.0.0",
+  "routing": {
+    "gatewayUrl": "http://localhost:8088",
+    "anthropicBaseUrl": "http://localhost:8088",
+    "openAiBaseUrl": "http://localhost:8088/v1",
+    "openCodeBaseUrl": "http://localhost:8088",
+    "keyRotatorUrl": "http://localhost:8990",
+    "rateLimiterUrl": "http://localhost:4141"
+  },
+  "mcp": {
+    "configPath": "C:/adi/vectorfiscal/omni-llm-suite/config/mcp-servers.json",
+    "servers": [
+      "git-mcp",
+      "mcp-filesystem",
+      "mcp-memory",
+      "fastmcp"
+    ]
+  },
+  "autoManagement": {
+    "tokenOptimization": true,
+    "contextManagement": true,
+    "rateLimitHandling": true,
+    "circuitBreaker": true
+  }
+}
