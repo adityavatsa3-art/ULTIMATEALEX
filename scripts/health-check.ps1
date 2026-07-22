@@ -18,7 +18,7 @@ function Get-EnvOrDefault($varName, $defaultVal) {
     if ($val) { return $val } else { return $defaultVal }
 }
 
-$gatewayPort = Get-EnvOrDefault "GATEWAY_PORT" "8080"
+$gatewayPort = Get-EnvOrDefault "GATEWAY_PORT" "8088"
 $rotatoPort  = Get-EnvOrDefault "ROTATO_PORT" "8990"
 $cruisePort  = Get-EnvOrDefault "CRUISE_PORT" "4141"
 $moaPort     = Get-EnvOrDefault "MOA_AGGREGATOR_PORT" "8007"

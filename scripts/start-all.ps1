@@ -19,7 +19,7 @@ function Get-EnvOrDefault($varName, $defaultVal) {
     if ($val) { return $val } else { return $defaultVal }
 }
 
-$GATEWAY_PORT = Get-EnvOrDefault "GATEWAY_PORT" "8080"
+$GATEWAY_PORT = Get-EnvOrDefault "GATEWAY_PORT" "8088"
 $ROTATO_PORT  = Get-EnvOrDefault "ROTATO_PORT" "8990"
 $CRUISE_PORT  = Get-EnvOrDefault "CRUISE_PORT" "4141"
 $MOA_PORT     = Get-EnvOrDefault "MOA_AGGREGATOR_PORT" "8007"
@@ -85,12 +85,13 @@ if (Test-Path ".venv\Scripts\activate.ps1") {
 
 # ─── Gateway (.NET 8) ─────────────────────────────────────
 Write-Host "🌐 Starting Gateway (.NET 8, port $GATEWAY_PORT)..." -ForegroundColor Cyan
-if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-    Start-Process -FilePath "dotnet" -ArgumentList "run", "--project", "apps/gateway", "--no-build" `
+$dotnetExe = "C:\Program Files\dotnet\dotnet.exe"
+if (Test-Path $dotnetExe) {
+    Start-Process -FilePath $dotnetExe -ArgumentList "run", "--project", "apps/gateway/Gateway.csproj", "-c", "Release" `
         -WorkingDirectory $root -WindowStyle Minimized -PassThru | Out-Null
     Write-Host "   ✅ Gateway started" -ForegroundColor Green
 } else {
-    Write-Host "   ⚠️  dotnet not found" -ForegroundColor Yellow
+    Write-Host "   ⚠️  dotnet.exe not found at $dotnetExe" -ForegroundColor Yellow
 }
 
 # ─── Dashboard (Vite React) ──────────────────────────────

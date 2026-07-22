@@ -4,10 +4,10 @@ $ErrorActionPreference = "Stop"
 Write-Host "`nSetting Permanent Environment Variables for AI Tools (Claude Code, OpenAI, OpenCode)..." -ForegroundColor Cyan
 
 $envVars = @{
-    "ANTHROPIC_BASE_URL" = "http://localhost:8080"
-    "OPENAI_BASE_URL"    = "http://localhost:8080/v1"
-    "OPENCODE_BASE_URL"  = "http://localhost:8080"
-    "OMNI_GATEWAY_URL"   = "http://localhost:8080"
+    "ANTHROPIC_BASE_URL" = "http://localhost:8088"
+    "OPENAI_BASE_URL"    = "http://localhost:8088/v1"
+    "OPENCODE_BASE_URL"  = "http://localhost:8088"
+    "OMNI_GATEWAY_URL"   = "http://localhost:8088"
     "OMNI_MCP_CONFIG"    = "C:\adi\vectorfiscal\omni-llm-suite\config\mcp-servers.json"
 }
 
@@ -29,7 +29,7 @@ $claudeSettingsFile = Join-Path $claudeConfigDir "settings.json"
 $settingsJson = @'
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "http://localhost:8080"
+    "ANTHROPIC_BASE_URL": "http://localhost:8088"
   },
   "mcpServers": {
     "omni-token-savior": {
@@ -46,6 +46,6 @@ $settingsJson = @'
 '@
 
 Set-Content -Path $claudeSettingsFile -Value $settingsJson -Encoding UTF8
-Write-Host "   [OK] Configured .claude/settings.json -> http://localhost:8080" -ForegroundColor Green
+Write-Host "   [OK] Configured .claude/settings.json -> http://localhost:8088" -ForegroundColor Green
 
 Write-Host "`n[OK] Permanent environment configuration complete!" -ForegroundColor Green
