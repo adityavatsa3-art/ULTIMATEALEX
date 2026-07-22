@@ -1,6 +1,6 @@
 # 🦌 Omni-LLM-Suite
 
-> A unified, Windows-native monorepo combining the best of 8 open-source LLM tools into a single fully executable stack.
+> A unified, Windows-native monorepo combining 12 open-source AI & security tools into a single fully executable stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](scripts/setup-windows.ps1)
@@ -30,6 +30,10 @@ Client → Gateway (:8080) → Rotato (:8990) → Claude Cruise (:4141) → MOA 
 | **rtk** | rtk-ai/rtk | Rust token killer proxy |
 | **opencoder** | ducan-ne/opencoder | Open-source Claude Code agent |
 | **openwork** | different-ai/openwork | AI workspace orchestration |
+| **jwt-tool** | ticarpi/jwt_tool | JWT testing & manipulation tool |
+| **keyhacks** | streaak/keyhacks | API keys validation & checks |
+| **trufflehog** | trufflesecurity/trufflehog | Secret scanning & credential detection |
+| **awesome-hacking** | Hack-with-Github/Awesome-Hacking | Security reference database |
 
 ## 🚀 Quick Start (Windows)
 

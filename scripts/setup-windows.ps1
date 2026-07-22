@@ -109,6 +109,10 @@ $repos = @(
     @{ Url = "https://github.com/xor0110xor-prog/free-llm-proxy-mixture.git"; Dir = "packages/free-llm-proxy" }
     @{ Url = "https://github.com/p32929/rotato.git";                           Dir = "packages/rotato" }
     @{ Url = "https://github.com/different-ai/openwork.git";                   Dir = "packages/openwork" }
+    @{ Url = "https://github.com/ticarpi/jwt_tool.git";                        Dir = "packages/jwt-tool" }
+    @{ Url = "https://github.com/streaak/keyhacks.git";                        Dir = "packages/keyhacks" }
+    @{ Url = "https://github.com/trufflesecurity/trufflehog.git";              Dir = "packages/trufflehog" }
+    @{ Url = "https://github.com/Hack-with-Github/Awesome-Hacking.git";        Dir = "packages/awesome-hacking" }
 )
 
 foreach ($repo in $repos) {
