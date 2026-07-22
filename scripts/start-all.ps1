@@ -14,11 +14,16 @@ if (Test-Path ".env") {
     }
 }
 
-$GATEWAY_PORT = $env:GATEWAY_PORT ?? "8080"
-$ROTATO_PORT = $env:ROTATO_PORT ?? "8990"
-$CRUISE_PORT = $env:CRUISE_PORT ?? "4141"
-$MOA_PORT = $env:MOA_AGGREGATOR_PORT ?? "8007"
-$TS_PORT = $env:TOKEN_SAVIOR_PORT ?? "3100"
+function Get-EnvOrDefault($varName, $defaultVal) {
+    $val = [Environment]::GetEnvironmentVariable($varName, "Process")
+    if ($val) { return $val } else { return $defaultVal }
+}
+
+$GATEWAY_PORT = Get-EnvOrDefault "GATEWAY_PORT" "8080"
+$ROTATO_PORT  = Get-EnvOrDefault "ROTATO_PORT" "8990"
+$CRUISE_PORT  = Get-EnvOrDefault "CRUISE_PORT" "4141"
+$MOA_PORT     = Get-EnvOrDefault "MOA_AGGREGATOR_PORT" "8007"
+$TS_PORT      = Get-EnvOrDefault "TOKEN_SAVIOR_PORT" "3100"
 
 Write-Host "`n🦌 Starting Omni-LLM-Suite..." -ForegroundColor Magenta
 Write-Host "   Root: $root`n" -ForegroundColor Gray

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "bun test --isolate tests/",
     "dev": "OPENWORK_DEV_MODE=1 vite",
-    "build": "vite build",
+    "build": "pnpm exec vite build",
     "dev:web": "OPENWORK_DEV_MODE=1 vite",
     "build:web": "vite build",
     "preview": "vite preview",

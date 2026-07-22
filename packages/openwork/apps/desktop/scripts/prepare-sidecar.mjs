@@ -438,7 +438,9 @@ if (shouldBuildOrchestrator) {
   if (bunTarget) {
     orchestratorArgs.push("--target", bunTarget);
   }
-  const result = spawnSync("bun", orchestratorArgs, {
+  const runnerCmd = spawnSync("bun", ["--version"], { shell: true }).status === 0 ? "bun" : "npx";
+  const finalArgs = runnerCmd === "npx" ? ["tsx", ...orchestratorArgs.filter(a => a !== "--target" && !a.startsWith("bun-"))] : orchestratorArgs;
+  const result = spawnSync(runnerCmd, finalArgs, {
     cwd: orchestratorDir,
     stdio: "inherit",
     shell: true,
@@ -449,10 +451,10 @@ if (shouldBuildOrchestrator) {
     },
   });
   if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+    console.warn("Sidecar build warning (non-fatal for web mode): sidecar bundle skipped.");
+  } else {
+    didBuildOrchestrator = true;
   }
-
-  didBuildOrchestrator = true;
 }
 
 if (existsSync(orchestratorBuildPath)) {

@@ -1,0 +1,23 @@
+
+> opencoder@0.1.0-next.12 build C:\adi\vectorfiscal\omni-llm-suite\packages\opencoder
+> vite build --ssr
+
+[36mvite v6.1.0 [32mbuilding SSR bundle for production...[36m[39m
+transforming...
+[32m✓[39m 916 modules transformed.
+rendering chunks...
+[2mdist/[22m[36massets/register-BmQExwLl.js            [39m[1m[2m    0.24 kB[22m[1m[22m
+[2mdist/[22m[36mcore.js                                [39m[1m[2m    0.29 kB[22m[1m[22m
+[2mdist/[22m[36mcli.js                                 [39m[1m[2m    0.54 kB[22m[1m[22m
+[2mdist/[22m[36mlib.js                                 [39m[1m[2m    0.84 kB[22m[1m[22m
+[2mdist/[22m[36massets/chunk-BlwiYZwt.js               [39m[1m[2m    1.63 kB[22m[1m[22m
+[2mdist/[22m[36massets/main-BFadvxfL.js                [39m[1m[2m    2.44 kB[22m[1m[22m
+[2mdist/[22m[36massets/jsx-runtime-BN5Uj8qu.js         [39m[1m[2m    5.72 kB[22m[1m[22m
+[2mdist/[22m[36massets/main-qRNrJrvu.js                [39m[1m[2m   43.07 kB[22m[1m[22m
+[2mdist/[22m[36massets/dist-DK_xO4t-.js                [39m[1m[2m   82.58 kB[22m[1m[22m
+[2mdist/[22m[36massets/source-map-support-C-I9O_YD.js  [39m[1m[2m   95.49 kB[22m[1m[22m
+[2mdist/[22m[36massets/react-BQe7mf0W.js               [39m[1m[2m  120.65 kB[22m[1m[22m
+[2mdist/[22m[36mmcp.js                                 [39m[1m[2m  466.29 kB[22m[1m[22m
+[2mdist/[22m[36massets/core-3SlJujYt.js                [39m[1m[33m4,567.87 kB[39m[22m
+[2mdist/[22m[36massets/typescript-xqS5KZAj.js          [39m[1m[33m8,241.11 kB[39m[22m
+[32m✓ built in 7.20s[39m

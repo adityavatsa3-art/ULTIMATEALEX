@@ -39,6 +39,7 @@ export default defineConfig({
       },
       external: [
         "ai",
+        /^ai\/.*/,
         "@ai-sdk/google",
         "@ai-sdk/openai",
         "@ai-sdk/anthropic",
@@ -71,9 +72,10 @@ export default defineConfig({
   plugins: [
     // dts(),
     tsconfigPaths({ projects: [path.resolve(__dirname, "tsconfig.json")] }),
-    (babel as any)({
+    /* (babel as any)({
       include: /\.tsx$/,
       babelConfig: {
+        presets: [["@babel/preset-typescript", { isTSX: true, allExtensions: true }]],
         plugins: [
           [path.resolve(__dirname, "node_modules/babel-plugin-react-compiler"), {}],
           process.env.NODE_ENV === "development" && [
@@ -85,14 +87,19 @@ export default defineConfig({
           process.env.NODE_ENV === "development" && ["@hh.ru/babel-plugin-react-displayname"],
         ].filter((v) => !!v),
       },
-    }),
+    }), */
     {
       name: "write-headers",
       closeBundle() {
         setTimeout(() => {
-          const cli = fs.readFileSync(path.resolve(__dirname, "dist/cli.js"), "utf-8")
-          fs.writeFileSync(path.resolve(__dirname, "dist/cli.js"), `#!/usr/bin/env node\n${cli}`)
-        }, 10)
+          const cliPath = path.resolve(__dirname, "dist/cli.js")
+          if (fs.existsSync(cliPath)) {
+            const cli = fs.readFileSync(cliPath, "utf-8")
+            if (!cli.startsWith("#!")) {
+              fs.writeFileSync(cliPath, `#!/usr/bin/env node\n${cli}`)
+            }
+          }
+        }, 100)
       },
     },
   ],

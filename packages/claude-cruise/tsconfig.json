@@ -16,7 +16,7 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["bun-types", "node"],
+    "types": ["node"],
     "lib": ["ES2022"],
     "baseUrl": ".",
     "paths": {
